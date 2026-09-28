@@ -98,6 +98,29 @@ object MusicScanner {
         }
     }
 
+    /** Leading track numbers: "01 ", "01. ", "01 - ", "1) ". */
+    private val TRACK_NUMBER_PREFIX = Regex("""^\s*\d{1,3}\s*[-._)]?\s+""")
+
+    /** The near-universal "Artist - Title" filename convention. */
+    private val ARTIST_TITLE = Regex("""^(.{1,120}?)\s+-\s+(.+)$""")
+
+    /**
+     * Most sideloaded music carries no ID3 tags at all, which would otherwise leave
+     * the whole library reading "Unknown Artist". The filename almost always
+     * encodes the same information, so fall back to parsing it.
+     */
+    private fun guessFromFileName(file: File): Pair<String?, String> {
+        val base = file.nameWithoutExtension
+            .replace('_', ' ')
+            .replace(TRACK_NUMBER_PREFIX, "")
+            .trim()
+
+        val match = ARTIST_TITLE.find(base) ?: return null to base
+        val artist = match.groupValues[1].trim()
+        val title = match.groupValues[2].trim()
+        return if (artist.isEmpty() || title.isEmpty()) null to base else artist to title
+    }
+
     private fun readTags(retriever: MediaMetadataRetriever, file: File, id: Long): Track {
         var title: String? = null
         var artist: String? = null
@@ -117,12 +140,18 @@ object MusicScanner {
             Log.w(TAG, "Unreadable tags for ${file.name}", e)
         }
 
+        val (guessedArtist, guessedTitle) = guessFromFileName(file)
+
         return Track(
             id = id,
             file = file,
-            title = title?.trim()?.takeIf { it.isNotEmpty() } ?: file.nameWithoutExtension,
-            artist = artist?.trim()?.takeIf { it.isNotEmpty() } ?: "Unknown Artist",
-            album = album?.trim()?.takeIf { it.isNotEmpty() } ?: "Unknown Album",
+            title = title?.trim()?.takeIf { it.isNotEmpty() } ?: guessedTitle,
+            artist = artist?.trim()?.takeIf { it.isNotEmpty() }
+                ?: guessedArtist
+                ?: "Unknown Artist",
+            // Left blank rather than "Unknown Album": the filename cannot tell us,
+            // and a screenful of "Unknown Album" is just noise.
+            album = album?.trim()?.takeIf { it.isNotEmpty() } ?: "",
             durationMs = duration,
         )
     }

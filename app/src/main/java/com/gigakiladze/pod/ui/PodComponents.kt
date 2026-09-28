@@ -379,12 +379,14 @@ fun NowPlayingScreen(state: PlaybackState, positionMs: Long) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Text(
-            text = track.album,
-            style = PodType.nowPlayingSub.copy(color = colors.textDim),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (track.album.isNotEmpty()) {
+            Text(
+                text = track.album,
+                style = PodType.nowPlayingSub.copy(color = colors.textDim),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
 
         Spacer(Modifier.height(10.dp))
         val progress = if (state.durationMs > 0L) {

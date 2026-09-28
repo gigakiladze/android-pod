@@ -48,7 +48,7 @@ class MusicLibrary(private val scope: CoroutineScope) {
                 }
                 tracks = found
                 artists = group(found, Track::artist)
-                albums = group(found, Track::album)
+                albums = group(found.filter { it.album.isNotEmpty() }, Track::album)
                 _state.value = LibraryState.Ready(found)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
